@@ -1,55 +1,53 @@
+'use client';
+
 import React from 'react';
-import { ToolState } from '../types';
+import type { GridToolState, GridPlacementMode } from '../types';
 
 interface ToolbarProps {
-  state: ToolState;
-  onChange: (state: ToolState) => void;
-  onConvert: () => void;
-  onClear: () => void;
+  state: GridToolState;
+  onStateChange: (state: GridToolState) => void;
+  onCopy: () => void;
+  onImportCSS?: () => void;
 }
 
-export const Toolbar: React.FC<ToolbarProps> = ({ state, onChange, onConvert, onClear }) => {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => onChange({ ...state, mode: 'yaml-to-json', input: state.output, output: '' })}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-            state.mode === 'yaml-to-json'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          YAML to JSON
-        </button>
-        <button
-          onClick={() => onChange({ ...state, mode: 'json-to-yaml', input: state.output, output: '' })}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md ${
-            state.mode === 'json-to-yaml'
-              ? 'bg-indigo-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          JSON to YAML
-        </button>
-      </div>
+/** Toolbar: placement mode, copy snippet, import CSS. */
+export const Toolbar: React.FC<ToolbarProps> = ({ state, onStateChange, onCopy, onImportCSS }) => {
+  const setMode = (mode: GridPlacementMode) => onStateChange({ ...state, placementMode: mode });
 
-      <div className="flex items-center gap-2">
-        {!state.autoConvert && (
-          <button
-            onClick={onConvert}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
-          >
-            Convert
-          </button>
-        )}
-        <button
-          onClick={onClear}
-          className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-        >
-          Clear
+  return (
+    <div
+      className="grid-toolbar flex flex-wrap items-center gap-2 p-2"
+      role="toolbar"
+      aria-label="Grid builder toolbar"
+    >
+      <button
+        data-testid="mode-areas"
+        className={state.placementMode === 'areas' ? 'tool-btn active' : 'tool-btn'}
+        onClick={() => setMode('areas')}
+        aria-pressed={state.placementMode === 'areas'}
+      >
+        Areas
+      </button>
+      <button
+        data-testid="mode-lines"
+        className={state.placementMode === 'lines' ? 'tool-btn active' : 'tool-btn'}
+        onClick={() => setMode('lines')}
+        aria-pressed={state.placementMode === 'lines'}
+      >
+        Line-based
+      </button>
+      <div className="flex-1" />
+      {onImportCSS && (
+        <button data-testid="import-css" className="tool-btn" onClick={onImportCSS}>
+          Import CSS
         </button>
-      </div>
+      )}
+      <button data-testid="copy-snippet" className="tool-btn primary" onClick={onCopy}>
+        Copy HTML+CSS
+      </button>
     </div>
   );
 };
+
+export const ToolToolbar = Toolbar;
+export default Toolbar;

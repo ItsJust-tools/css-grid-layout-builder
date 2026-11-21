@@ -10,13 +10,15 @@ import { JsonLd } from '@/app/json-ld';
 import ToolPage from '@/app/page';
 import { cn } from '@/lib/utils';
 import { generateJsonLd, generateToolMetadata } from '@/lib/seo';
-import toolConfig from '@/tool/tool.config';
+import { toolConfig } from '@/tool/tool.config';
 import { getPublicSiteUrl, templateMetadata } from '@/tool/template-metadata';
-import { notepadTool } from '@/tool/notepad-state';
-import { ToolCanvas } from '@/tool/components/tool-canvas';
-import { ToolSidebar } from '@/tool/components/tool-sidebar';
-import { ToolToolbar } from '@/tool/components/tool-toolbar';
+import { gridTool } from '@/tool/tool-definition';
+import { ToolCanvas } from '@/tool/components/Canvas';
+import { ToolSidebar } from '@/tool/components/Sidebar';
+import { ToolToolbar } from '@/tool/components/Toolbar';
+import { generateSnippet } from '@/tool/grid-logic';
 import type { ExporterLoader } from '@itsjust/core';
+import type { GridToolState } from '@/tool/types';
 
 vi.mock('next/link', () => ({
   default: ({ href, children, ...props }: { href: string; children: ReactNode }) => (
@@ -29,6 +31,22 @@ vi.mock('next/link', () => ({
 vi.mock('@/app/tool-client-wrapper', () => ({
   default: () => <div data-testid="tool-client-wrapper">tool-client-wrapper</div>,
 }));
+
+function sampleState(): GridToolState {
+  return {
+    version: 1,
+    columns: ['1fr', '1fr'],
+    rows: ['1fr'],
+    columnGap: 16,
+    rowGap: 16,
+    areas: [
+      { id: 'a1', name: 'left', rowStart: 1, rowSpan: 1, colStart: 1, colSpan: 1 },
+      { id: 'a2', name: 'right', rowStart: 1, rowSpan: 1, colStart: 2, colSpan: 1 },
+    ],
+    breakpoints: [],
+    placementMode: 'areas',
+  };
+}
 
 describe('app and seo', () => {
   const getOgImageUrl = (
@@ -92,20 +110,13 @@ describe('app and seo', () => {
   it('covers tool definition and helper exports', async () => {
     expect(cn('a', undefined, 'b', false, null, 'c')).toBe('a b c');
     expect(getPublicSiteUrl()).toBe('http://localhost:3000');
-    expect(notepadTool.deserialize({ content: 'x' })).toEqual({
-      success: true,
-      data: { content: 'x', title: '' },
-    });
-    expect(notepadTool.deserialize({ nope: true })).toEqual({
+    expect(gridTool.deserialize({ nope: true })).toEqual({
       success: false,
-      error: 'Invalid data format: expected { content: string, title?: string }',
+      error: 'Invalid data format: expected a CSS grid layout state',
     });
-    expect(notepadTool.serialize({ content: 'x' })).toContain('"content": "x"');
-    expect(notepadTool.deserialize({ content: 'x', title: 'My Note' })).toEqual({
-      success: true,
-      data: { content: 'x', title: 'My Note' },
-    });
-    const exporters = (notepadTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
+    expect(gridTool.deserialize(JSON.parse(JSON.stringify(sampleState()))).success).toBe(true);
+    expect(gridTool.serialize(sampleState())).toContain('"columns"');
+    const exporters = (gridTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
     expect(exporters).toHaveLength(4);
     const first = exporters[0];
     expect(first).toBeDefined();
@@ -113,19 +124,21 @@ describe('app and seo', () => {
     const png = await (first.loader as ExporterLoader)();
     const resolved = 'default' in png ? png.default : png.exporter;
     expect(resolved.format).toBe('png');
+    expect(generateSnippet(sampleState())).toContain('.area-left');
   });
 
   it('renders tool components', () => {
     render(
       <>
-        <ToolToolbar />
-        <ToolSidebar text="Hello world" fontSize={16} onFontSizeChange={() => {}} />
-        <ToolCanvas text="" fontSize={16} />
+        <ToolToolbar state={sampleState()} onStateChange={() => {}} onCopy={() => {}} />
+        <ToolSidebar state={sampleState()} onStateChange={() => {}} />
+        <ToolCanvas state={sampleState()} onStateChange={() => {}} />
       </>
     );
 
-    expect(screen.getByRole('link', { name: 'Open help page' })).toBeInTheDocument();
-    expect(screen.getByText('11')).toBeInTheDocument(); // char count for "Hello world"
-    expect(screen.getByRole('application', { name: 'Notepad canvas' })).toBeInTheDocument();
+    expect(screen.getByRole('toolbar', { name: 'Grid builder toolbar' })).toBeInTheDocument();
+    expect(screen.getByTestId('grid-canvas')).toBeInTheDocument();
+    expect(screen.getByTestId('grid-area-left')).toBeInTheDocument();
+    expect(screen.getByTestId('grid-sidebar')).toBeInTheDocument();
   });
 });

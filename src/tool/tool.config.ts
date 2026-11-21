@@ -1,14 +1,18 @@
-import type { ToolConfig } from '@itsjust/core';
-import packageJson from '../../package.json';
+import type { FeatureFlags } from '@itsjust/core';
+import type { GridPlacementMode } from './types';
 
-export const templateBaseVersion = packageJson.version;
-
-const toolConfig = {
-  id: 'simple-notepad',
-  name: 'Notepad',
-  description: 'A clean, distraction-free notepad. Write, edit, and export your notes instantly.',
-  version: '1.3.0',
-  exportFormats: ['json', 'png', 'jpeg', 'webp', 'pdf'],
+export const toolConfig = {
+  id: 'css-grid-layout-builder',
+  name: 'CSS Grid Layout Builder',
+  category: 'Design',
+  description: 'Visually design CSS grid layouts and export the HTML/CSS code.',
+  version: '1.0.0',
+  exportFormats: ['png', 'jpeg', 'webp', 'pdf'] as (
+    | 'png'
+    | 'jpeg'
+    | 'webp'
+    | 'pdf'
+  )[],
   features: {
     export: true,
     autoSave: true,
@@ -16,22 +20,15 @@ const toolConfig = {
     sidebar: true,
     statusBar: true,
     darkMode: true,
-  },
+  } as FeatureFlags,
   theme: {
-    accent: '#10b981',
-    accentHover: '#059669',
-    accentSubtle: 'rgba(16, 185, 129, 0.08)',
-    brand: 'Notepad',
-    icon: '\u{1F4DF}',
+    accent: '#6366f1',
+    accentHover: '#4f46e5',
+    accentSubtle: 'rgba(99, 102, 241, 0.12)',
+    brand: 'CSS Grid Layout Builder',
+    icon: '▦',
   },
-  shortcuts: [
-    {
-      title: 'Notepad',
-      shortcuts: [
-        { keys: 'Ctrl+Shift+E', label: 'Export All', description: 'exports all formats at once' },
-      ],
-    },
-  ],
-} satisfies ToolConfig;
+  placementModes: ['areas', 'lines'] as GridPlacementMode[],
+};
 
-export default toolConfig;
+export const templateBaseVersion = '1.0.0';

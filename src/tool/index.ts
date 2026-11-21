@@ -1,10 +1,48 @@
-export { default as toolConfig } from './tool.config';
+export { toolConfig } from './tool.config';
 export { templateBaseVersion } from './tool.config';
 export { templateMetadata, getPublicSiteUrl } from './template-metadata';
-export { yamlToJsonTool, convert, YamlToJsonToolDefinition } from './tool-definition';
-export { notepadTool } from './notepad-state';
-export { ToolCanvas } from './components/tool-canvas';
-export { ToolToolbar } from './components/tool-toolbar';
-export { ToolSidebar } from './components/tool-sidebar';
-export type { NotepadState } from './notepad-state';
-export type { ToolState, ConversionMode } from './types';
+export { gridTool, GridToolDefinition } from './tool-definition';
+export {
+  setTracks,
+  addTrack,
+  removeTrack,
+  setGap,
+  setPlacementMode,
+  upsertArea,
+  removeArea,
+  renameArea,
+  moveArea,
+  resizeArea,
+  applyPresetToState,
+  presetIds,
+  addBreakpoint,
+  removeBreakpoint,
+  importGridCSS,
+} from './tool-definition';
+export {
+  presets,
+  applyPreset,
+  buildAreaMatrix,
+  gridTemplateAreas,
+  generateGridCSS,
+  generateHTML,
+  generateSnippet,
+  validateAreas,
+  isValidTrack,
+  sanitizeTracks,
+  clampStateToTracks,
+  areaOverlaps,
+  sanitizeAreaName,
+  nextAreaId,
+  resetAreaIds,
+  GRID_ID_PREFIX,
+} from './grid-logic';
+export { ToolCanvas } from './components/Canvas';
+export { ToolToolbar } from './components/Toolbar';
+export { ToolSidebar } from './components/Sidebar';
+export type {
+  GridToolState,
+  GridArea,
+  GridBreakpoint,
+  GridPlacementMode,
+} from './types';

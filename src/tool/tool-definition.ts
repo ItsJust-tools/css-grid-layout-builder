@@ -1,38 +1,43 @@
 import type { Tool, DeserializeResult } from '@itsjust/core';
-import toolConfig from './tool.config';
-import type { ToolState, ConversionMode } from './types';
-import yaml from 'js-yaml';
+import { toolConfig } from './tool.config';
+import type { GridToolState, GridArea, GridBreakpoint } from './types';
+import {
+  isGridToolState,
+  clampStateToTracks,
+  presets,
+  applyPreset,
+  nextAreaId,
+} from './grid-logic';
 
-function isToolState(value: unknown): value is ToolState {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Partial<ToolState>;
-  return (
-    typeof v.input === 'string' &&
-    typeof v.output === 'string' &&
-    (v.mode === 'yaml-to-json' || v.mode === 'json-to-yaml')
-  );
+function defaultState(): GridToolState {
+  return applyPreset('sidebar') ?? {
+    version: 1,
+    columns: ['1fr'],
+    rows: ['1fr'],
+    columnGap: 16,
+    rowGap: 16,
+    areas: [],
+    breakpoints: [],
+    placementMode: 'areas',
+  };
 }
 
-export const yamlToJsonTool: Tool<ToolState> = {
+export const gridTool: Tool<GridToolState> = {
   id: toolConfig.id,
   name: toolConfig.name,
-  version: toolConfig.version,
-  config: toolConfig,
-  initialState: {
-    input: 'name: John Doe\nage: 30\nskills:\n  - JavaScript\n  - TypeScript\nactive: true',
-    output: '',
-    mode: 'yaml-to-json',
-    indent: 2,
-    error: null,
-    autoConvert: true,
-  },
-  serialize: (state) => JSON.stringify(state),
-  deserialize: (data): DeserializeResult<ToolState> => {
+  version: toolConfig.version ?? '1.0.0',
+  config: toolConfig as unknown as Tool['config'],
+  initialState: (toolConfig as { id: string }).id === 'css-grid-layout-builder' ? defaultState() : defaultState(),
+  serialize: (state) => JSON.stringify(clampStateToTracks(state)),
+  deserialize: (data: unknown): DeserializeResult<GridToolState> => {
     try {
-      if (isToolState(data)) {
-        return { success: true, data: data };
+      if (isGridToolState(data)) {
+        return { success: true, data: clampStateToTracks(data) };
       }
-      return { success: false, error: 'Invalid data format: expected valid converter state' };
+      return {
+        success: false,
+        error: 'Invalid data format: expected a CSS grid layout state',
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Deserialization error';
       return { success: false, error: `Failed to deserialize state: ${message}` };
@@ -46,46 +51,152 @@ export const yamlToJsonTool: Tool<ToolState> = {
   ],
 };
 
-/** Convert YAML↔JSON based on state.mode. Not part of the Tool contract. */
-export function convert(state: ToolState): ToolState {
-    if (!state.input.trim()) {
-      return { ...state, output: '', error: null };
-    }
+// ---------------------------------------------------------------------------
+// Layout editing operations (pure functions over state)
+// ---------------------------------------------------------------------------
 
-    try {
-      if (state.mode === 'yaml-to-json') {
-        const parsed = yaml.load(state.input);
-        const output = JSON.stringify(parsed, null, state.indent);
-        return { ...state, output, error: null };
-      } else {
-        const parsed = JSON.parse(state.input);
-        const output = yaml.dump(parsed, { indent: state.indent });
-        return { ...state, output, error: null };
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Conversion error';
-      return { ...state, output: '', error: message };
-    }
+export function setTracks(
+  state: GridToolState,
+  axis: 'rows' | 'columns',
+  tracks: string[]
+): GridToolState {
+  const trimmed = tracks.map((t) => t.trim()).filter(Boolean);
+  const next: GridToolState = { ...state, [axis]: trimmed };
+  return clampStateToTracks(next);
 }
 
-// Back-compat alias for existing tests using the class-based name.
-export class YamlToJsonToolDefinition {
-  initialState: ToolState = yamlToJsonTool.initialState;
+export function addTrack(
+  state: GridToolState,
+  axis: 'rows' | 'columns',
+  value?: string,
+  index?: number
+): GridToolState {
+  const list = state[axis];
+  const idx = index === undefined ? list.length : Math.max(0, Math.min(list.length, index));
+  const nextList = [...list];
+  nextList.splice(idx, 0, value && value.trim() ? value.trim() : '1fr');
+  const next: GridToolState = { ...state, [axis]: nextList };
+  return clampStateToTracks(next);
+}
 
-  serialize(state: ToolState): string {
-    return yamlToJsonTool.serialize(state);
+export function removeTrack(
+  state: GridToolState,
+  axis: 'rows' | 'columns',
+  index: number
+): GridToolState {
+  const list = state[axis];
+  if (list.length <= 1) return state; // keep at least one track
+  const idx = Math.max(0, Math.min(list.length - 1, index));
+  const nextList = list.filter((_, i) => i !== idx);
+  const next: GridToolState = { ...state, [axis]: nextList };
+  return clampStateToTracks(next);
+}
+
+export function setGap(state: GridToolState, axis: 'row' | 'column', value: number): GridToolState {
+  const clamped = Math.max(0, Math.min(64, Math.round(value) || 0));
+  return axis === 'row'
+    ? { ...state, rowGap: clamped }
+    : { ...state, columnGap: clamped };
+}
+
+export function setPlacementMode(
+  state: GridToolState,
+  mode: GridToolState['placementMode']
+): GridToolState {
+  return { ...state, placementMode: mode };
+}
+
+export function upsertArea(state: GridToolState, area: GridArea): GridToolState {
+  const exists = state.areas.some((a) => a.id === area.id);
+  const areas = exists
+    ? state.areas.map((a) => (a.id === area.id ? area : a))
+    : [...state.areas, { ...area, id: area.id || nextAreaId() }];
+  return clampStateToTracks({ ...state, areas });
+}
+
+export function removeArea(state: GridToolState, areaId: string): GridToolState {
+  return { ...state, areas: state.areas.filter((a) => a.id !== areaId) };
+}
+
+export function renameArea(state: GridToolState, areaId: string, name: string): GridToolState {
+  return {
+    ...state,
+    areas: state.areas.map((a) => (a.id === areaId ? { ...a, name } : a)),
+  };
+}
+
+export function moveArea(
+  state: GridToolState,
+  areaId: string,
+  rowStart: number,
+  colStart: number
+): GridToolState {
+  return clampStateToTracks({
+    ...state,
+    areas: state.areas.map((a) =>
+      a.id === areaId ? { ...a, rowStart, colStart } : a
+    ),
+  });
+}
+
+export function resizeArea(
+  state: GridToolState,
+  areaId: string,
+  rowSpan: number,
+  colSpan: number
+): GridToolState {
+  return clampStateToTracks({
+    ...state,
+    areas: state.areas.map((a) =>
+      a.id === areaId ? { ...a, rowSpan: Math.max(1, rowSpan), colSpan: Math.max(1, colSpan) } : a
+    ),
+  });
+}
+
+export function applyPresetToState(state: GridToolState, presetId: string): GridToolState {
+  const presetState = applyPreset(presetId);
+  return presetState ? clampStateToTracks(presetState) : state;
+}
+
+export function presetIds(): string[] {
+  return Object.keys(presets);
+}
+
+// ---------------------------------------------------------------------------
+// Breakpoints
+// ---------------------------------------------------------------------------
+
+export function addBreakpoint(state: GridToolState, bp: GridBreakpoint): GridToolState {
+  return { ...state, breakpoints: [...(state.breakpoints ?? []), bp] };
+}
+
+export function removeBreakpoint(state: GridToolState, bpId: string): GridToolState {
+  return { ...state, breakpoints: (state.breakpoints ?? []).filter((b) => b.id !== bpId) };
+}
+
+// ---------------------------------------------------------------------------
+// Import CSS into state (reverse-engineering)
+// ---------------------------------------------------------------------------
+
+export { importGridCSS } from './grid-logic';
+
+/** Class wrapper for tests that prefer instance-style API. */
+export class GridToolDefinition {
+  initialState: GridToolState = gridTool.initialState;
+
+  serialize(state: GridToolState): string {
+    return gridTool.serialize(state);
   }
 
-  deserialize(serialized: string): DeserializeResult<ToolState> {
+  deserialize(serialized: string): DeserializeResult<GridToolState> {
     try {
       const parsed: unknown = JSON.parse(serialized);
-      return yamlToJsonTool.deserialize(parsed);
+      return gridTool.deserialize(parsed);
     } catch {
-      return { success: false, error: 'Invalid data format: expected valid converter state' };
+      return {
+        success: false,
+        error: 'Invalid data format: expected a CSS grid layout state',
+      };
     }
-  }
-
-  convert(state: ToolState): ToolState {
-    return convert(state);
   }
 }

@@ -1,4 +1,4 @@
-import toolConfig from './tool.config';
+import { toolConfig } from './tool.config';
 
 const DEFAULT_DEV_URL = 'http://localhost:3000';
 

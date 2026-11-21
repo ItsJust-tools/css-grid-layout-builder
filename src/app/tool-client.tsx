@@ -9,7 +9,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from 'react';
-import { ToolShell, useTool, ImportExport } from '@itsjust/core';
+import { ToolShell, useTool } from '@itsjust/core';
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
 import {
   toolConfig,
@@ -17,12 +17,11 @@ import {
   ToolCanvas,
   ToolToolbar,
   ToolSidebar,
+  gridTool,
+  importGridCSS,
+  generateSnippet,
 } from '@/tool';
-import { notepadTool as notepadToolDef, type NotepadState } from '@/tool/notepad-state';
-
-const DEFAULT_FONT_SIZE = 16;
-const MIN_FONT_SIZE = 8;
-const MAX_FONT_SIZE = 72;
+import type { GridToolState } from '@/tool';
 
 export default function ToolClient() {
   const ToolShellCompat = ToolShell as unknown as ComponentType<Record<string, unknown>> & {
@@ -33,7 +32,7 @@ export default function ToolClient() {
     StatusBar?: ComponentType<{ children?: ReactNode }>;
   };
   const canvasRef = useRef<HTMLDivElement>(null);
-  const tool = useTool<NotepadState>(notepadToolDef, canvasRef);
+  const tool = useTool<GridToolState>(gridTool, canvasRef);
   const setToolData = tool.state.setData;
   const showToast = tool.toast;
   const [isSharing, setIsSharing] = useState(false);
@@ -41,25 +40,15 @@ export default function ToolClient() {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(
     () => typeof window !== 'undefined' && window.innerWidth > 768 && toolConfig.features.sidebar
   );
-  const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
+  const [copied, setCopied] = useState(false);
 
-  const title = tool.state.data.title?.trim() || toolConfig.name;
+  const state = tool.state.data;
 
   useEffect(() => {
-    document.title = title;
-  }, [title]);
-
-  const handleTextChange = useCallback(
-    (text: string) => {
-      setToolData((prev) => ({ ...prev, content: text }));
-    },
-    [setToolData]
-  );
-
-  const handleFontSizeChange = useCallback((delta: number) => {
-    setFontSize((prev) => Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, prev + delta)));
+    document.title = toolConfig.name;
   }, []);
 
+  // Load state from a shared URL once.
   useEffect(() => {
     if (hasLoadedSharedState.current) return;
     hasLoadedSharedState.current = true;
@@ -70,7 +59,7 @@ export default function ToolClient() {
       const serialized = decompressFromEncodedURIComponent(encodedState);
       if (!serialized) throw new Error('Invalid shared URL');
       const parsed: unknown = JSON.parse(serialized);
-      const deserialized = notepadToolDef.deserialize(parsed);
+      const deserialized = gridTool.deserialize(parsed);
       if (!deserialized.success) throw new Error(deserialized.error);
       setToolData(deserialized.data);
       showToast('Loaded state from shared URL', 'success');
@@ -83,7 +72,7 @@ export default function ToolClient() {
   const handleShare = useCallback(async () => {
     setIsSharing(true);
     try {
-      const serialized = notepadToolDef.serialize(tool.state.data);
+      const serialized = gridTool.serialize(tool.state.data);
       const encodedState = compressToEncodedURIComponent(serialized);
       if (!encodedState) throw new Error('Failed to encode state for URL');
       const url = new URL(window.location.href);
@@ -94,7 +83,7 @@ export default function ToolClient() {
       const shareUrl = url.toString();
       if (navigator.share) {
         try {
-          await navigator.share({ title, url: shareUrl });
+          await navigator.share({ title: toolConfig.name, url: shareUrl });
           showToast('Shared URL ready', 'success');
           return;
         } catch (error) {
@@ -109,32 +98,61 @@ export default function ToolClient() {
     } finally {
       setIsSharing(false);
     }
-  }, [showToast, tool.state.data, title]);
+  }, [showToast, tool.state.data]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      const snippet = generateSnippet(tool.state.data);
+      await navigator.clipboard.writeText(snippet);
+      setCopied(true);
+      showToast('HTML+CSS snippet copied', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Copy failed';
+      showToast(message, 'error');
+    }
+  }, [showToast, tool.state.data]);
+
+  const handleImportCSS = useCallback(() => {
+    const css = window.prompt('Paste .grid CSS to import:');
+    if (!css) return;
+    try {
+      const imported = importGridCSS(css);
+      setToolData(imported);
+      showToast('Grid CSS imported', 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Import failed';
+      showToast(message, 'error');
+    }
+  }, [setToolData, showToast]);
 
   const toolbarContent = (
     <>
-      <ToolToolbar />
-      <ImportExport
-        formats={tool.supportedFormats}
-        onExport={tool.handleExport}
-        onImport={tool.importFromFile}
-        isImporting={tool.isImporting}
-        onShare={handleShare}
-        isSharing={isSharing}
+      <ToolToolbar
+        state={state}
+        onStateChange={(next) => setToolData(next)}
+        onCopy={handleCopy}
+        onImportCSS={handleImportCSS}
       />
     </>
   );
 
   const sidebarContent = (
-    <ToolSidebar text={tool.state.data.content} fontSize={fontSize} onFontSizeChange={handleFontSizeChange} />
+    <ToolSidebar
+      state={state}
+      onStateChange={(next) => setToolData(next)}
+      onUndo={tool.toolbarActions.onUndo}
+      onRedo={tool.toolbarActions.onRedo}
+      canUndo={tool.toolbarActions.canUndo}
+      canRedo={tool.toolbarActions.canRedo}
+    />
   );
 
   const canvasContent = (
     <ToolCanvas
       canvasRef={canvasRef}
-      text={tool.state.data.content}
-      fontSize={fontSize}
-      onChange={handleTextChange}
+      state={state}
+      onStateChange={(next) => setToolData(next)}
     />
   );
 
@@ -154,7 +172,9 @@ export default function ToolClient() {
           'Ready'
         )}
       </span>
-      <span className="status-slot status-slot-font-size">{fontSize}px</span>
+      <span className="status-slot status-slot-grid-size">
+        {state.columns.length}×{state.rows.length}
+      </span>
       <span className="status-slot status-slot-tool-version">Tool v{toolConfig.version}</span>
       <span className="status-slot status-slot-template-version">
         Template v{templateBaseVersion}
@@ -164,10 +184,10 @@ export default function ToolClient() {
 
   const hasLegacySections = Boolean(
     ToolShellCompat.Toolbar &&
-    ToolShellCompat.Body &&
-    ToolShellCompat.Sidebar &&
-    ToolShellCompat.Canvas &&
-    ToolShellCompat.StatusBar
+      ToolShellCompat.Body &&
+      ToolShellCompat.Sidebar &&
+      ToolShellCompat.Canvas &&
+      ToolShellCompat.StatusBar
   );
 
   return (

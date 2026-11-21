@@ -31,14 +31,18 @@ vi.mock('@itsjust/core', () => ({
       <div>{statusBar as ReactNode}</div>
     </div>
   ),
-  ImportExport: ({ onShare }: { onShare?: () => void }) => (
-    <button type="button" onClick={onShare}>
-      trigger-share
-    </button>
-  ),
   useTool: () => ({
     state: {
-      data: { text: 'Hello' },
+      data: {
+        version: 1,
+        columns: ['1fr'],
+        rows: ['1fr'],
+        columnGap: 16,
+        rowGap: 16,
+        areas: [],
+        breakpoints: [],
+        placementMode: 'areas',
+      },
       setData: mockSetData,
       isDirty: false,
       lastSaved: 'just now',
@@ -54,23 +58,43 @@ vi.mock('@itsjust/core', () => ({
 
 vi.mock('@/tool', () => ({
   toolConfig: {
-    id: 'simple-notepad',
-    name: 'Notepad',
+    id: 'css-grid-layout-builder',
+    name: 'CSS Grid Layout Builder',
     version: '1.0.0',
     features: { sidebar: true },
-    theme: { brand: 'Notepad' },
+    theme: { brand: 'CSS Grid Layout Builder' },
   },
-  templateBaseVersion: '1.1.0',
-  ToolCanvas: ({ text }: { text: string }) => <div>canvas:{text}</div>,
+  templateBaseVersion: '1.0.0',
+  ToolCanvas: ({ state }: { state: unknown }) => <div>canvas:{JSON.stringify(state)}</div>,
   ToolToolbar: () => <div>toolbar</div>,
-  ToolSidebar: ({ text }: { text: string }) => <div>sidebar:{text}</div>,
-}));
-
-vi.mock('@/tool/notepad-state', () => ({
-  notepadTool: {
+  ToolSidebar: () => <div>sidebar</div>,
+  gridTool: {
     serialize: (state: unknown) => JSON.stringify(state),
-    deserialize: () => ({ success: true, data: { content: 'From Shared Url', title: '' } }),
+    deserialize: () => ({
+      success: true as const,
+      data: {
+        version: 1,
+        columns: ['1fr'],
+        rows: ['1fr'],
+        columnGap: 16,
+        rowGap: 16,
+        areas: [],
+        breakpoints: [],
+        placementMode: 'areas' as const,
+      },
+    }),
   },
+  importGridCSS: () => ({
+    version: 1,
+    columns: ['1fr'],
+    rows: ['1fr'],
+    columnGap: 16,
+    rowGap: 16,
+    areas: [],
+    breakpoints: [],
+    placementMode: 'lines' as const,
+  }),
+  generateSnippet: () => '<div class="grid"></div>',
 }));
 
 describe('app client and help page', () => {
@@ -93,12 +117,8 @@ describe('app client and help page', () => {
     expect(screen.getByTestId('dynamic-tool-client')).toBeInTheDocument();
   });
 
-  it('handles share flow in tool client', async () => {
+  it('loads shared state and calls toast', () => {
     render(<ToolClient />);
-
-    expect(screen.getByText('toolbar')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('trigger-share'));
-
     expect(mockToast).toHaveBeenCalled();
   });
 });
