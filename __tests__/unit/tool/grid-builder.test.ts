@@ -126,7 +126,14 @@ describe('areas', () => {
 
   it('detects overlaps', () => {
     const s = upsertArea(
-      upsertArea(baseState(), { id: 'a', name: 'x', rowStart: 1, rowSpan: 1, colStart: 1, colSpan: 2 }),
+      upsertArea(baseState(), {
+        id: 'a',
+        name: 'x',
+        rowStart: 1,
+        rowSpan: 1,
+        colStart: 1,
+        colSpan: 2,
+      }),
       { id: 'b', name: 'y', rowStart: 1, rowSpan: 1, colStart: 2, colSpan: 1 }
     );
     expect(areaOverlaps(s.areas)).toBe(true);
@@ -163,7 +170,14 @@ describe('serialization round-trip', () => {
 
   it('serialize then deserialize preserves state losslessly', () => {
     let s = applyPresetToState(baseState(), 'dashboard');
-    s = upsertArea(s, { id: 'extra', name: 'extra', rowStart: 1, rowSpan: 1, colStart: 4, colSpan: 1 });
+    s = upsertArea(s, {
+      id: 'extra',
+      name: 'extra',
+      rowStart: 1,
+      rowSpan: 1,
+      colStart: 4,
+      colSpan: 1,
+    });
     const serialized = def.serialize(s);
     const parsed = JSON.parse(serialized) as unknown;
     const result = gridTool.deserialize(parsed);
@@ -228,7 +242,11 @@ describe('code generation', () => {
   });
 
   it('lines mode emits line-based placement', () => {
-    const s = { ...applyPresetToState(baseState(), 'sidebar'), placementMode: 'lines' as const, areas: [] };
+    const s = {
+      ...applyPresetToState(baseState(), 'sidebar'),
+      placementMode: 'lines' as const,
+      areas: [],
+    };
     const css = generateGridCSS(s);
     expect(css).not.toContain('grid-template-areas');
   });
@@ -240,9 +258,7 @@ describe('code generation', () => {
     // identical breakpoint produces no media query
     const same: GridToolState = {
       ...s,
-      breakpoints: [
-        { id: 'x', label: 'x', minWidth: 768, columns: s.columns, rows: s.rows },
-      ],
+      breakpoints: [{ id: 'x', label: 'x', minWidth: 768, columns: s.columns, rows: s.rows }],
     };
     expect(generateGridCSS(same)).not.toContain('@media (min-width: 768px)');
   });
@@ -310,7 +326,9 @@ describe('import grid CSS', () => {
 describe('gridTool contract', () => {
   it('initialState is a fully valid state', () => {
     expect(gridTool.initialState.version).toBe(1);
-    expect(gridTool.deserialize(JSON.parse(JSON.stringify(gridTool.initialState))).success).toBe(true);
+    expect(gridTool.deserialize(JSON.parse(JSON.stringify(gridTool.initialState))).success).toBe(
+      true
+    );
   });
 });
 

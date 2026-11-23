@@ -7,12 +7,7 @@ export const toolConfig = {
   category: 'Design',
   description: 'Visually design CSS grid layouts and export the HTML/CSS code.',
   version: '1.0.0',
-  exportFormats: ['png', 'jpeg', 'webp', 'pdf'] as (
-    | 'png'
-    | 'jpeg'
-    | 'webp'
-    | 'pdf'
-  )[],
+  exportFormats: ['png', 'jpeg', 'webp', 'pdf'] as ('png' | 'jpeg' | 'webp' | 'pdf')[],
   features: {
     export: true,
     autoSave: true,

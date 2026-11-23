@@ -15,7 +15,8 @@ export const Canvas: React.FC<CanvasProps> = ({ state, onStateChange, canvasRef 
   const matrix = useMemo(() => buildAreaMatrix(state), [state]);
 
   const cellCount = state.rows.length * state.columns.length;
-  if (!canvasRef) canvasRef = React.useRef<HTMLDivElement | null>(null);
+  const localRef = React.useRef<HTMLDivElement | null>(null);
+  const ref = canvasRef ?? localRef;
 
   const cells: Array<{ key: string; label: string; area?: string }> = [];
   for (let r = 1; r <= state.rows.length; r++) {
@@ -29,7 +30,10 @@ export const Canvas: React.FC<CanvasProps> = ({ state, onStateChange, canvasRef 
   }
 
   // dedupe by area name: one labeled box per named area
-  const areaCells = new Map<string, { startRow: number; startCol: number; rowSpan: number; colSpan: number }>();
+  const areaCells = new Map<
+    string,
+    { startRow: number; startCol: number; rowSpan: number; colSpan: number }
+  >();
   for (const area of state.areas) {
     areaCells.set(sanitizeAreaName(area.name || GRID_ID_PREFIX + area.id), {
       startRow: area.rowStart,
@@ -40,7 +44,7 @@ export const Canvas: React.FC<CanvasProps> = ({ state, onStateChange, canvasRef 
   }
 
   return (
-    <div ref={canvasRef} className="grid-canvas p-4 overflow-auto" data-testid="grid-canvas">
+    <div ref={ref} className="grid-canvas p-4 overflow-auto" data-testid="grid-canvas">
       <div
         role="application"
         aria-label="Grid preview canvas"

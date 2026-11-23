@@ -149,11 +149,7 @@ export default function ToolClient() {
   );
 
   const canvasContent = (
-    <ToolCanvas
-      canvasRef={canvasRef}
-      state={state}
-      onStateChange={(next) => setToolData(next)}
-    />
+    <ToolCanvas canvasRef={canvasRef} state={state} onStateChange={(next) => setToolData(next)} />
   );
 
   const statusBarContent = (
@@ -184,10 +180,10 @@ export default function ToolClient() {
 
   const hasLegacySections = Boolean(
     ToolShellCompat.Toolbar &&
-      ToolShellCompat.Body &&
-      ToolShellCompat.Sidebar &&
-      ToolShellCompat.Canvas &&
-      ToolShellCompat.StatusBar
+    ToolShellCompat.Body &&
+    ToolShellCompat.Sidebar &&
+    ToolShellCompat.Canvas &&
+    ToolShellCompat.StatusBar
   );
 
   return (

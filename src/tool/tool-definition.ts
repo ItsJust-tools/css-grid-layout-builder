@@ -10,16 +10,18 @@ import {
 } from './grid-logic';
 
 function defaultState(): GridToolState {
-  return applyPreset('sidebar') ?? {
-    version: 1,
-    columns: ['1fr'],
-    rows: ['1fr'],
-    columnGap: 16,
-    rowGap: 16,
-    areas: [],
-    breakpoints: [],
-    placementMode: 'areas',
-  };
+  return (
+    applyPreset('sidebar') ?? {
+      version: 1,
+      columns: ['1fr'],
+      rows: ['1fr'],
+      columnGap: 16,
+      rowGap: 16,
+      areas: [],
+      breakpoints: [],
+      placementMode: 'areas',
+    }
+  );
 }
 
 export const gridTool: Tool<GridToolState> = {
@@ -27,7 +29,10 @@ export const gridTool: Tool<GridToolState> = {
   name: toolConfig.name,
   version: toolConfig.version ?? '1.0.0',
   config: toolConfig as unknown as Tool['config'],
-  initialState: (toolConfig as { id: string }).id === 'css-grid-layout-builder' ? defaultState() : defaultState(),
+  initialState:
+    (toolConfig as { id: string }).id === 'css-grid-layout-builder'
+      ? defaultState()
+      : defaultState(),
   serialize: (state) => JSON.stringify(clampStateToTracks(state)),
   deserialize: (data: unknown): DeserializeResult<GridToolState> => {
     try {
@@ -94,9 +99,7 @@ export function removeTrack(
 
 export function setGap(state: GridToolState, axis: 'row' | 'column', value: number): GridToolState {
   const clamped = Math.max(0, Math.min(64, Math.round(value) || 0));
-  return axis === 'row'
-    ? { ...state, rowGap: clamped }
-    : { ...state, columnGap: clamped };
+  return axis === 'row' ? { ...state, rowGap: clamped } : { ...state, columnGap: clamped };
 }
 
 export function setPlacementMode(
@@ -133,9 +136,7 @@ export function moveArea(
 ): GridToolState {
   return clampStateToTracks({
     ...state,
-    areas: state.areas.map((a) =>
-      a.id === areaId ? { ...a, rowStart, colStart } : a
-    ),
+    areas: state.areas.map((a) => (a.id === areaId ? { ...a, rowStart, colStart } : a)),
   });
 }
 

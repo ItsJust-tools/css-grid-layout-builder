@@ -1,13 +1,7 @@
 // Core grid-layout logic: presets, template strings, code generation,
 // serialization, and import of existing grid CSS. Framework-agnostic.
 
-import type {
-  GridArea,
-  GridBreakpoint,
-  GridPlacementMode,
-  GridToolState,
-} from './types';
-
+import type { GridArea, GridBreakpoint, GridPlacementMode, GridToolState } from './types';
 
 // strict-mode helpers for RegExpExecArray access
 function m1(m: RegExpExecArray | null): string | undefined {
@@ -55,8 +49,9 @@ export function isValidTrack(value: string): boolean {
     const max = minmax[2];
     if (!min || !max) return false;
     return (
-      min === 'auto' || isValidTrack(min) || /^[\d.]+(px|rem|em|%)$/.test(min)
-    ) && (max === 'auto' || isValidTrack(max));
+      (min === 'auto' || isValidTrack(min) || /^[\d.]+(px|rem|em|%)$/.test(min)) &&
+      (max === 'auto' || isValidTrack(max))
+    );
   }
   if (/^repeat\(\s*\d+\s*,\s*[^)]+\)$/.test(v)) return true;
   if (/^(min|max)-content$/.test(v)) return true;
@@ -96,11 +91,8 @@ export function clampStateToTracks(state: GridToolState): GridToolState {
       rows: bp.rows ? sanitizeTracks(bp.rows) : undefined,
       columns: bp.columns ? sanitizeTracks(bp.columns) : undefined,
       rowGap: bp.rowGap !== undefined ? clampInt(bp.rowGap, MIN_GAP, MAX_GAP) : undefined,
-      columnGap:
-        bp.columnGap !== undefined ? clampInt(bp.columnGap, MIN_GAP, MAX_GAP) : undefined,
-      areas: bp.areas?.map((a) =>
-        clampArea(a, bp.rows ?? state.rows, bp.columns ?? state.columns)
-      ),
+      columnGap: bp.columnGap !== undefined ? clampInt(bp.columnGap, MIN_GAP, MAX_GAP) : undefined,
+      areas: bp.areas?.map((a) => clampArea(a, bp.rows ?? state.rows, bp.columns ?? state.columns)),
     })),
   } as GridToolState;
 }
@@ -358,10 +350,7 @@ export function generateGridCSS(state: GridToolState): string {
       lines.push('');
     }
   } else {
-    const allAreas = [
-      ...state.areas,
-      ...(state.breakpoints ?? []).flatMap((bp) => bp.areas ?? []),
-    ];
+    const allAreas = [...state.areas, ...(state.breakpoints ?? []).flatMap((bp) => bp.areas ?? [])];
     const seen = new Set<string>();
     for (const area of state.areas) {
       const name = sanitizeAreaName(area.name || GRID_ID_PREFIX + area.id);
@@ -380,8 +369,7 @@ export function generateGridCSS(state: GridToolState): string {
   for (const bp of state.breakpoints ?? []) {
     const changedCols =
       bp.columns !== undefined && bp.columns.join(' ') !== state.columns.join(' ');
-    const changedRows =
-      bp.rows !== undefined && bp.rows.join(' ') !== state.rows.join(' ');
+    const changedRows = bp.rows !== undefined && bp.rows.join(' ') !== state.rows.join(' ');
     const changedGaps =
       (bp.columnGap !== undefined && bp.columnGap !== state.columnGap) ||
       (bp.rowGap !== undefined && bp.rowGap !== state.rowGap);
@@ -398,21 +386,17 @@ export function generateGridCSS(state: GridToolState): string {
         ));
     if (!changedCols && !changedRows && !changedGaps && !changedAreas) continue;
 
-    const mq =
-      bp.minWidth > 0 ? `@media (min-width: ${bp.minWidth}px) {` : '@media all {';
+    const mq = bp.minWidth > 0 ? `@media (min-width: ${bp.minWidth}px) {` : '@media all {';
     lines.push(mq);
     lines.push('  .grid {');
     if (changedCols || changedRows || changedGaps || (useAreas && changedAreas)) {
       lines.push(
-        ...containerCss(
-          state,
-          {
-            columns: changedCols ? bp.columns : undefined,
-            rows: changedRows ? bp.rows : undefined,
-            columnGap: bp.columnGap,
-            rowGap: bp.rowGap,
-          }
-        )
+        ...containerCss(state, {
+          columns: changedCols ? bp.columns : undefined,
+          rows: changedRows ? bp.rows : undefined,
+          columnGap: bp.columnGap,
+          rowGap: bp.rowGap,
+        })
       );
     }
     if (useAreas && changedAreas && bp.areas) {
@@ -435,9 +419,7 @@ export function generateGridCSS(state: GridToolState): string {
 }
 
 export function generateHTML(state: GridToolState): string {
-  const names = state.areas.map(
-    (a) => sanitizeAreaName(a.name || GRID_ID_PREFIX + a.id)
-  );
+  const names = state.areas.map((a) => sanitizeAreaName(a.name || GRID_ID_PREFIX + a.id));
   const children = names.map((n) => `  <div class="area-${n}">${n}</div>`).join('\n');
   return `<div class="grid">\n${children}\n</div>`;
 }
@@ -489,7 +471,8 @@ export function isGridToolState(value: unknown): value is GridToolState {
     Number.isFinite(v.rowGap) &&
     Array.isArray(v.areas) &&
     v.areas.every(isValidArea) &&
-    (v.breakpoints === undefined || (Array.isArray(v.breakpoints) && v.breakpoints.every(isValidBreakpoint))) &&
+    (v.breakpoints === undefined ||
+      (Array.isArray(v.breakpoints) && v.breakpoints.every(isValidBreakpoint))) &&
     (v.placementMode === 'areas' || v.placementMode === 'lines')
   );
 }

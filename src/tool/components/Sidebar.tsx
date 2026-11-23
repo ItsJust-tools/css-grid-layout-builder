@@ -2,13 +2,7 @@
 
 import React from 'react';
 import type { GridToolState, GridArea, GridBreakpoint } from '../types';
-import {
-  presets,
-  isValidTrack,
-  sanitizeAreaName,
-  nextAreaId,
-  GRID_ID_PREFIX,
-} from '../grid-logic';
+import { presets, isValidTrack, sanitizeAreaName, nextAreaId, GRID_ID_PREFIX } from '../grid-logic';
 import {
   addTrack,
   removeTrack,
@@ -51,16 +45,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const addArea = () => {
     // find first free cell
-    const taken = new Set(state.areas.flatMap((a) => {
-      const cells: string[] = [];
-      for (let r = a.rowStart; r < a.rowStart + a.rowSpan; r++)
-        for (let c = a.colStart; c < a.colStart + a.colSpan; c++) cells.push(`${r}:${c}`);
-      return cells;
-    }));
+    const taken = new Set(
+      state.areas.flatMap((a) => {
+        const cells: string[] = [];
+        for (let r = a.rowStart; r < a.rowStart + a.rowSpan; r++)
+          for (let c = a.colStart; c < a.colStart + a.colSpan; c++) cells.push(`${r}:${c}`);
+        return cells;
+      })
+    );
     let placed: { r: number; c: number } | null = null;
     for (let r = 1; r <= rowCount && !placed; r++)
-      for (let c = 1; c <= colCount && !placed; c++)
-        if (!taken.has(`${r}:${c}`)) placed = { r, c };
+      for (let c = 1; c <= colCount && !placed; c++) if (!taken.has(`${r}:${c}`)) placed = { r, c };
     const name = sanitizeAreaName(newAreaName || `area-${state.areas.length + 1}`);
     const area: GridArea = {
       id: nextAreaId(),
@@ -245,7 +240,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const r = Math.floor(i / colCount) + 1;
             const c = (i % colCount) + 1;
             const a = state.areas.find(
-              (x) => r >= x.rowStart && r < x.rowStart + x.rowSpan && c >= x.colStart && c < x.colStart + x.colSpan
+              (x) =>
+                r >= x.rowStart &&
+                r < x.rowStart + x.rowSpan &&
+                c >= x.colStart &&
+                c < x.colStart + x.colSpan
             );
             return (
               <div
@@ -275,20 +274,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 data-testid={`area-name-${a.id}`}
                 value={a.name}
                 onChange={(e) =>
-                  onStateChange({ ...state, areas: state.areas.map((x) => x.id === a.id ? { ...x, name: e.target.value } : x) })
+                  onStateChange({
+                    ...state,
+                    areas: state.areas.map((x) =>
+                      x.id === a.id ? { ...x, name: e.target.value } : x
+                    ),
+                  })
                 }
                 className="tool-input"
                 style={{ flex: '1 1 90px' }}
                 aria-label={`Area name for ${n}`}
               />
-              <span style={{ fontSize: 11 }}>{`${a.rowStart},${a.colStart} ${a.rowSpan}×${a.colSpan}`}</span>
+              <span
+                style={{ fontSize: 11 }}
+              >{`${a.rowStart},${a.colStart} ${a.rowSpan}×${a.colSpan}`}</span>
               <button
                 data-testid={`area-row-span-inc-${a.id}`}
                 className={btn}
                 onClick={() =>
                   onStateChange({
                     ...state,
-                    areas: state.areas.map((x) => x.id === a.id ? { ...x, rowSpan: x.rowSpan + 1 } : x),
+                    areas: state.areas.map((x) =>
+                      x.id === a.id ? { ...x, rowSpan: x.rowSpan + 1 } : x
+                    ),
                   })
                 }
                 aria-label={`Increase row span of ${n}`}
@@ -301,7 +309,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() =>
                   onStateChange({
                     ...state,
-                    areas: state.areas.map((x) => x.id === a.id ? { ...x, colSpan: x.colSpan + 1 } : x),
+                    areas: state.areas.map((x) =>
+                      x.id === a.id ? { ...x, colSpan: x.colSpan + 1 } : x
+                    ),
                   })
                 }
                 aria-label={`Increase col span of ${n}`}

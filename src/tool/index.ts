@@ -40,9 +40,4 @@ export {
 export { ToolCanvas } from './components/Canvas';
 export { ToolToolbar } from './components/Toolbar';
 export { ToolSidebar } from './components/Sidebar';
-export type {
-  GridToolState,
-  GridArea,
-  GridBreakpoint,
-  GridPlacementMode,
-} from './types';
+export type { GridToolState, GridArea, GridBreakpoint, GridPlacementMode } from './types';

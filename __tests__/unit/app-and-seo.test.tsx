@@ -116,7 +116,8 @@ describe('app and seo', () => {
     });
     expect(gridTool.deserialize(JSON.parse(JSON.stringify(sampleState()))).success).toBe(true);
     expect(gridTool.serialize(sampleState())).toContain('"columns"');
-    const exporters = (gridTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
+    const exporters =
+      (gridTool as { exporters?: Array<{ loader: ExporterLoader }> }).exporters ?? [];
     expect(exporters).toHaveLength(4);
     const first = exporters[0];
     expect(first).toBeDefined();
